@@ -11,7 +11,7 @@ Stress is the body's adaptive reaction to psychological or physiological threats
 #model interpretability file is for t-SNE representation of different model layers
 
 
-#StressECGNet file is the code of the overall model representation
+#StressECGNet_model file is the code of the overall model representation
 
 
-#Data Augmentation file is the code of applied minority class data augmentation techniques.
+#DataAugmentation file is the code of applied minority class data augmentation techniques.
