@@ -1,0 +1,157 @@
+import tensorflow as tf
+from tensorflow.keras.layers import LayerNormalization, MultiHeadAttention, Add, Dense, Input, Conv1D, MaxPooling1D, BatchNormalization, Dropout, GlobalMaxPooling1D, Concatenate, Layer
+from tensorflow.keras.models import Model
+from tensorflow.keras.regularizers import l2
+import numpy as np
+from tensorflow.keras.layers import Bidirectional, LSTM
+from keras.layers import Conv1D, MaxPooling1D, BatchNormalization, Add, Concatenate, ZeroPadding1D
+from tensorflow.keras.layers import Input, Conv1D, MaxPooling1D, BatchNormalization, SeparableConv1D, Bidirectional, GRU, LSTM, Dense, Add, Concatenate, GlobalAveragePooling1D, Reshape, Attention
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import GlobalAveragePooling1D, Dense, Multiply
+from tensorflow.keras.layers import SeparableConv1D, AveragePooling1D, BatchNormalization, Concatenate
+
+def se_block(input_layer, reduction_ratio=4):
+    filters = input_layer.shape[-1]
+    se = GlobalAveragePooling1D()(input_layer)
+    se = Dense(filters // reduction_ratio, activation='relu')(se)
+    se = Dense(filters, activation='sigmoid')(se)
+    return Multiply()([input_layer, se])
+
+class PositionalEncoding(Layer):
+    def __init__(self, position, d_model):
+        super(PositionalEncoding, self).__init__()
+        self.position = position
+        self.d_model = d_model
+
+    def get_angles(self, pos, i, d_model):
+        angle_rates = 1 / np.power(10000, (2 * (i // 2)) / np.float32(d_model))
+        return pos * angle_rates
+
+    def call(self, inputs):
+        seq_length = tf.shape(inputs)[1]
+        angles = self.get_angles(np.arange(self.position)[:, np.newaxis],
+                                 np.arange(self.d_model)[np.newaxis, :],
+                                 self.d_model)
+
+        # Apply sine to even indices in the array; 2i
+        angles[:, 0::2] = np.sin(angles[:, 0::2])
+
+        # Apply cosine to odd indices in the array; 2i+1
+        angles[:, 1::2] = np.cos(angles[:, 1::2])
+
+        pos_encoding = angles[np.newaxis, ...]
+        pos_encoding = tf.cast(pos_encoding, dtype=tf.float32)
+
+        # Scale the input (optional, closer to original implementation)
+        inputs *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
+
+        return inputs + pos_encoding[:, :seq_length, :]
+
+
+
+def shared_cnn(input_layer, filters1, kernel_size1, filters2, kernel_size2, filters3, kernel_size3):
+    # First CNN block
+    conv1 = Conv1D(filters=filters1, kernel_size=kernel_size1, activation='relu')(input_layer)
+    # Apply SE block after conv2
+    conv1 = se_block(conv1)
+    maxpool1 = AveragePooling1D(pool_size=2)(conv1)
+    batch_norm1 = BatchNormalization()(maxpool1)
+    
+    # Second CNN block
+    conv2 = Conv1D(filters=filters2, kernel_size=kernel_size2, activation='relu')(batch_norm1)
+    # Apply SE block after conv2
+    conv2 = se_block(conv2)
+    maxpool2 = AveragePooling1D(pool_size=2)(conv2)
+    batch_norm2 = BatchNormalization()(maxpool2)
+ 
+    conv3 = Conv1D(filters=filters3, kernel_size=kernel_size3, activation='relu')(batch_norm2)
+    #conv3 = se_block(conv3)
+    maxpool3 = AveragePooling1D(pool_size=2)(conv3)
+    batch_norm3 = BatchNormalization()(maxpool3)
+   
+    return batch_norm3
+
+
+def hybrid_depthwise_cnn(input_layer, filters1, kernel_size1, filters2, kernel_size2, filters3, kernel_size3):
+    conv1 = SeparableConv1D(filters=filters1, kernel_size=kernel_size1, activation='relu')(input_layer)
+    conv1 = se_block(conv1)
+    maxpool1 = AveragePooling1D(pool_size=2)(conv1)
+    batch_norm1 = BatchNormalization()(maxpool1)
+
+    conv2 = SeparableConv1D(filters=filters2, kernel_size=kernel_size2, activation='relu')(batch_norm1)
+    conv2 = se_block(conv2)
+    maxpool2 = AveragePooling1D(pool_size=2)(conv2)
+    batch_norm2 = BatchNormalization()(maxpool2)
+
+    conv3 = SeparableConv1D(filters=filters3, kernel_size=kernel_size3, activation='relu')(batch_norm2)
+    #conv3 = se_block(conv3)
+    maxpool3 = AveragePooling1D(pool_size=2)(conv3)
+    batch_norm3 = BatchNormalization()(maxpool3)
+   
+    return batch_norm3
+
+
+def transformer_encoder(input_layer, num_heads, units):
+    # Layer normalization before self-attention (optional change for Pre-Norm)
+    norm_input = LayerNormalization()(input_layer)
+    
+    # Self-Attention
+    attention_output = MultiHeadAttention(num_heads=num_heads, key_dim=units)(norm_input, norm_input)
+    attention_output = Add()([input_layer, attention_output])  # Residual connection
+
+    # Layer normalization before FFN (optional change for Pre-Norm)
+    norm_attention = LayerNormalization()(attention_output)
+    
+    # Feed-forward neural network with expansion
+    ffn = Dense(4 * units, activation='relu')(norm_attention)  # Expansion
+    ffn_output = Dense(units)(ffn)  # Reduce back to `units`
+    ffn_output = Add()([attention_output, ffn_output])  # Residual connection
+    transformer_output = LayerNormalization()(ffn_output)
+
+    return transformer_output
+
+
+input_layer = Input(shape=(2560, 1))
+shared_cnn_output2 = shared_cnn(input_layer, filters1=32, kernel_size1=14, filters2=64, kernel_size2=8, filters3=128, kernel_size3=5)
+# Apply hybrid CNN
+hybrid_cnn_output2 = hybrid_depthwise_cnn(input_layer, filters1=32, kernel_size1=14, filters2=64, kernel_size2=8, filters3=128, kernel_size3=5)
+# Concatenate CNN outputs 
+combined_output2 = Add()([shared_cnn_output2, hybrid_cnn_output2])
+combined_output2 = se_block(combined_output2)
+# Apply a Bidirectional LSTM layer after each CNN output
+bilstm_output2 = Bidirectional(LSTM(units=64, return_sequences=True))(combined_output2)                                                                      
+# Apply Positional Encoding after LSTM outputs
+pos_encoder2 = PositionalEncoding(position=2560, d_model=128)(bilstm_output2)   # d_model matches LSTM output size
+# Apply Transformer Encoder to each Positional Encoding output
+transformer_output2 = transformer_encoder(pos_encoder2, num_heads=4, units=128)
+# Apply a second Transformer Encoder layer if needed
+transformer_output2_2 = transformer_encoder(transformer_output2, num_heads=2, units=128)
+
+# Apply a second Transformer Encoder layer if needed
+#transformer_output1_2 = transformer_encoder(transformer_output1_1, num_heads=2, units=256)
+transformer_output2_3 = transformer_encoder(transformer_output2_2, num_heads=2, units=128)
+transformer_output2_4 = transformer_encoder(transformer_output2_3, num_heads=2, units=128)
+transformer_output2_5 = transformer_encoder(transformer_output2_4, num_heads=2, units=128)
+transformer_output2_6 = transformer_encoder(transformer_output2_5, num_heads=2, units=128)
+transformer_output2_7 = transformer_encoder(transformer_output2_6, num_heads=2, units=128)
+transformer_output2_8 = transformer_encoder(transformer_output2_7, num_heads=2, units=128)
+transformer_output2_9 = transformer_encoder(transformer_output2_8, num_heads=2, units=128)
+
+# Residual connection
+residual_output2 = Add()([transformer_output2_5, bilstm_output2])
+# Apply Global Max Pooling to flatten the outputs
+pooled_output2 = GlobalAveragePooling1D()(residual_output2)
+# Concatenate the outputs of both 
+# Dense layers
+dense1 = Dense(units=256, activation='relu', kernel_regularizer=l2(0.01))(pooled_output2)
+batch_norm4 = BatchNormalization()(dense1)
+drop1 = Dropout(0.4)(batch_norm4)
+dense2 = Dense(units=128, activation='relu', kernel_regularizer=l2(0.01))(drop1)
+batch_norm5 = BatchNormalization()(dense2)
+drop2 = Dropout(0.4)(batch_norm5)
+# Output layer for binary classification
+output = Dense(units=1, activation='sigmoid')(drop2)
+# Build and compile the model
+model = Model(inputs=input_layer, outputs=output)
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    
