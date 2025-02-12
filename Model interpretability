@@ -1,0 +1,161 @@
+from tensorflow.keras.models import load_model
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Model
+import matplotlib.pyplot as plt
+import umap
+from sklearn.manifold import TSNE
+
+# Assuming 'model' is your Keras model
+for layer in model.layers:
+    print(layer.name)
+
+
+
+
+# input layer
+layer_name = 'input_layer'  # Replace with your actual layer name
+# Create a new model that outputs the activations of the specified layer
+layer_output = model.get_layer(layer_name).output
+activation_model = Model(inputs=model.input, outputs=layer_output)
+# Get feature maps for all test data
+feature_maps = activation_model.predict(X_test)
+# Flatten feature maps to 2D array (samples, features)
+num_samples = feature_maps.shape[0]
+num_features = np.prod(feature_maps.shape[1:])  # Flatten all dimensions except the batch dimension
+flattened_feature_maps = feature_maps.reshape(num_samples, num_features)
+
+# Run t-SNE to reduce to 2D
+tsne = TSNE(n_components=2, random_state=42, perplexity=30, n_iter=1000)
+tsne_embedding = tsne.fit_transform(flattened_feature_maps)
+
+# Plot t-SNE
+plt.figure(figsize=(5, 4))
+plt.scatter(tsne_embedding[tp_indices, 0], tsne_embedding[tp_indices, 1], color='red', label='Positives', s=15)
+plt.scatter(tsne_embedding[tn_indices, 0], tsne_embedding[tn_indices, 1], color='green', label='Negatives', s=15)
+plt.title(f't-SNE Rep. of Test Data')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.legend()
+# Save the plot as an image file
+plt.savefig('tsne_feature_maps_input_layer.png')  # You can change the filename and format as needed
+plt.show()
+
+
+
+
+
+#Addition layer
+# Specify the layer name
+layer_name = 'add'  # Replace with your actual layer name
+# Create a new model that outputs the activations of the specified layer
+layer_output = model.get_layer(layer_name).output
+activation_model = Model(inputs=model.input, outputs=layer_output)
+# Get feature maps for all test data
+feature_maps = activation_model.predict(X_test)
+# Flatten feature maps to 2D array (samples, features)
+num_samples = feature_maps.shape[0]
+num_features = np.prod(feature_maps.shape[1:])  # Flatten all dimensions except the batch dimension
+flattened_feature_maps = feature_maps.reshape(num_samples, num_features)
+tsne_embedding = tsne.fit_transform(flattened_feature_maps)
+
+# Run t-SNE to reduce to 2D
+tsne = TSNE(n_components=2, random_state=42, perplexity=30, n_iter=1000)
+tsne_embedding = tsne.fit_transform(flattened_feature_maps)
+# Plot t-SNE
+plt.figure(figsize=(5, 4))
+plt.scatter(tsne_embedding[tp_indices, 0], tsne_embedding[tp_indices, 1], color='red', label='Positives', s=15)
+plt.scatter(tsne_embedding[tn_indices, 0], tsne_embedding[tn_indices, 1], color='green', label='Negatives', s=15)
+plt.title(f't-SNE Rep. of Test Data')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.legend()
+# Save the plot as an image file
+plt.savefig('tsne_feature_maps_add.png')  # You can change the filename and format as needed
+plt.show()
+
+
+
+
+#bidirectional_1
+# Specify the layer name
+layer_name = 'bidirectional_1'  # Replace with your actual layer name
+# Create a new model that outputs the activations of the specified layer
+layer_output = model.get_layer(layer_name).output
+activation_model = Model(inputs=model.input, outputs=layer_output)
+# Get feature maps for all test data
+feature_maps = activation_model.predict(X_test)
+# Flatten feature maps to 2D array (samples, features)
+num_samples = feature_maps.shape[0]
+num_features = np.prod(feature_maps.shape[1:])  # Flatten all dimensions except the batch dimension
+flattened_feature_maps = feature_maps.reshape(num_samples, num_features)
+
+tsne_embedding = tsne.fit_transform(flattened_feature_maps)
+# Plot t-SNE for bidirectional_1
+plt.figure(figsize=(5, 4))
+plt.scatter(tsne_embedding[tp_indices, 0], tsne_embedding[tp_indices, 1], color='red', label='Positives', s=15)
+plt.scatter(tsne_embedding[tn_indices, 0], tsne_embedding[tn_indices, 1], color='green', label='Negatives', s=15)
+plt.title(f't-SNE Rep. of Test Data')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.legend()
+# Save the plot as an image file
+plt.savefig('tsne_feature_maps_bidirectional_1.png')  # You can change the filename and format as needed
+plt.show()
+
+
+
+
+
+# add_9 layer
+layer_name = 'add_9'  # Replace with your actual layer name
+# Create a new model that outputs the activations of the specified layer
+layer_output = model.get_layer(layer_name).output
+activation_model = Model(inputs=model.input, outputs=layer_output)
+# Get feature maps for all test data
+feature_maps = activation_model.predict(X_test)
+# Flatten feature maps to 2D array (samples, features)
+num_samples = feature_maps.shape[0]
+num_features = np.prod(feature_maps.shape[1:])  # Flatten all dimensions except the batch dimension
+flattened_feature_maps = feature_maps.reshape(num_samples, num_features)
+tsne_embedding = tsne.fit_transform(flattened_feature_maps)
+
+# Plot t-SNE
+plt.figure(figsize=(5, 4))
+plt.scatter(tsne_embedding[tp_indices, 0], tsne_embedding[tp_indices, 1], color='red', label='Positives', s=15)
+plt.scatter(tsne_embedding[tn_indices, 0], tsne_embedding[tn_indices, 1], color='green', label='Negatives', s=15)
+plt.title(f't-SNE Rep. of Test Data')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.legend()
+# Save the plot as an image file
+plt.savefig('tsne_feature_maps_add_9.png')  # You can change the filename and format as needed
+plt.show()
+
+
+
+
+# for dense_19 layer
+layer_name = 'dense_19'  # Replace with your actual layer name
+# Create a new model that outputs the activations of the specified layer
+layer_output = model.get_layer(layer_name).output
+activation_model = Model(inputs=model.input, outputs=layer_output)
+# Get feature maps for all test data
+feature_maps = activation_model.predict(X_test)
+# Flatten feature maps to 2D array (samples, features)
+num_samples = feature_maps.shape[0]
+num_features = np.prod(feature_maps.shape[1:])  # Flatten all dimensions except the batch dimension
+flattened_feature_maps = feature_maps.reshape(num_samples, num_features)
+tsne_embedding = tsne.fit_transform(flattened_feature_maps)
+
+# Plot t-SNE
+plt.figure(figsize=(5, 4))
+plt.scatter(tsne_embedding[tp_indices, 0], tsne_embedding[tp_indices, 1], color='red', label='Positives', s=15)
+plt.scatter(tsne_embedding[tn_indices, 0], tsne_embedding[tn_indices, 1], color='green', label='Negatives', s=15)
+plt.title(f't-SNE Rep. of Test Data')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.legend()
+# Save the plot as an image file
+plt.savefig('tsne_feature_maps_dense_19.png')  # You can change the filename and format as needed
+plt.show()
